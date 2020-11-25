@@ -1,6 +1,7 @@
 use crate::{Entry, Key};
 use std::collections::*;
 
+#[derive(Debug)]
 pub struct MemTable {
     entries: BTreeMap<Key, Entry>,
     max_cap: usize,

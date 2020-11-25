@@ -10,7 +10,7 @@ use std::{
 };
 
 pub struct SSTableBuilder<E: Encoder> {
-    id: Option<String>,
+    id: Option<usize>,
     data_dir: Option<PathBuf>,
     encoder: Option<E>,
 }
@@ -24,7 +24,7 @@ impl<E: Encoder> SSTableBuilder<E> {
         }
     }
 
-    pub fn with_id(self, id: String) -> Self {
+    pub fn with_id(self, id: usize) -> Self {
         Self {
             id: Some(id),
             ..self
@@ -39,7 +39,7 @@ impl<E: Encoder> SSTableBuilder<E> {
     }
 
     pub fn build(self) -> Option<SSTable<E>> {
-        let file_path = self.data_dir?.join(self.id.clone()?);
+        let file_path = self.data_dir?.join(self.id?.to_string());
         let sink = OpenOptions::new()
             .read(true)
             .write(true)
@@ -66,7 +66,7 @@ impl SSTableBuilder<BincodeEncoder> {
 
 #[derive(Debug)]
 pub struct SSTable<E: Encoder> {
-    id: String,
+    id: usize,
     file_path: PathBuf,
     sink: File,
     encoder: E,
