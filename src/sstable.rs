@@ -73,7 +73,7 @@ impl<S: DataSink, E: Encoder> SSTable<S, E> {
         None
     }
 
-    pub fn for_each<F>(&mut self, f: F)
+    pub fn scan<F>(&mut self, f: F)
     where
         F: Fn(Entry),
     {

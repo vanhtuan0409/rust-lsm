@@ -1,6 +1,6 @@
 extern crate lsm;
 
-use lsm::{Entry, SSTableBuilder};
+use lsm::{Entry, SSTable, SSTableBuilder};
 
 fn get_entry(index: usize) -> Entry {
     let key = format!("foo{}", index);
@@ -12,7 +12,7 @@ fn get_entry(index: usize) -> Entry {
 }
 
 fn main() {
-    let mut table = SSTableBuilder::new()
+    let mut table: SSTable<_, _> = SSTableBuilder::new()
         .with_inmem_sink()
         .with_bincode_encoder()
         .build()
@@ -23,5 +23,5 @@ fn main() {
         table.insert(&entry).unwrap();
     }
 
-    table.for_each(|decoded| println!("{:?}", decoded));
+    table.scan(|entry| println!("{:?}", entry));
 }
