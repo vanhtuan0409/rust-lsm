@@ -13,6 +13,7 @@ fn get_entry(index: usize) -> Entry {
 
 fn main() {
     let mut table: SSTable<_, _> = SSTableBuilder::new()
+        .with_id("sstable01".to_string())
         .with_inmem_sink()
         .with_bincode_encoder()
         .build()

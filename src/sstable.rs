@@ -6,6 +6,7 @@ pub trait DataSink: Read + Write + Seek {}
 impl<T> DataSink for T where T: Read + Write + Seek {}
 
 pub struct SSTableBuilder<S: DataSink, E: Encoder> {
+    id: Option<String>,
     sink: Option<S>,
     encoder: Option<E>,
 }
@@ -14,13 +15,23 @@ pub type InMemSink = Cursor<Vec<u8>>;
 impl<S: DataSink, E: Encoder> SSTableBuilder<S, E> {
     pub fn new() -> Self {
         Self {
+            id: None,
             sink: None,
             encoder: None,
         }
     }
 
+    pub fn with_id(self, id: String) -> Self {
+        Self {
+            id: Some(id),
+            sink: self.sink,
+            encoder: self.encoder,
+        }
+    }
+
     pub fn build(self) -> Option<SSTable<S, E>> {
         Some(SSTable {
+            id: self.id?,
             sink: self.sink?,
             encoder: self.encoder?,
         })
@@ -30,6 +41,7 @@ impl<S: DataSink, E: Encoder> SSTableBuilder<S, E> {
 impl<E: Encoder> SSTableBuilder<InMemSink, E> {
     pub fn with_inmem_sink(self) -> SSTableBuilder<InMemSink, E> {
         SSTableBuilder {
+            id: self.id,
             sink: Some(Cursor::new(Vec::new())),
             encoder: self.encoder,
         }
@@ -39,6 +51,7 @@ impl<E: Encoder> SSTableBuilder<InMemSink, E> {
 impl<S: DataSink> SSTableBuilder<S, BincodeEncoder> {
     pub fn with_bincode_encoder(self) -> SSTableBuilder<S, BincodeEncoder> {
         SSTableBuilder {
+            id: self.id,
             sink: self.sink,
             encoder: Some(BincodeEncoder::new()),
         }
@@ -46,15 +59,12 @@ impl<S: DataSink> SSTableBuilder<S, BincodeEncoder> {
 }
 
 pub struct SSTable<S: DataSink, E: Encoder> {
+    id: String,
     sink: S,
     encoder: E,
 }
 
 impl<S: DataSink, E: Encoder> SSTable<S, E> {
-    pub fn new(sink: S, encoder: E) -> Self {
-        Self { sink, encoder }
-    }
-
     #[allow(dead_code)]
     pub fn offset(&mut self) -> Result<u64, ()> {
         self.sink
