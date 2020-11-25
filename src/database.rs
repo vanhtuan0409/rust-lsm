@@ -58,7 +58,7 @@ impl Database {
             return Some(found);
         }
 
-        for (_, segment) in self.sstables.iter_mut() {
+        for (_, segment) in self.sstables.iter_mut().rev() {
             if let Some(found) = segment.search(key) {
                 return Some(found);
             }
