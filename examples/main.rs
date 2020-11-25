@@ -2,7 +2,6 @@ extern crate lsm;
 
 use lsm::entry::Entry;
 use lsm::sstable::SSTable;
-use std::io::Cursor;
 
 fn get_entry(index: usize) -> Entry {
     let key = format!("foo{}", index);
@@ -14,7 +13,7 @@ fn get_entry(index: usize) -> Entry {
 }
 
 fn main() {
-    let mut table = SSTable::new(Cursor::new(Vec::new()));
+    let mut table = SSTable::new_in_mem();
 
     for i in 0..10 {
         let entry = get_entry(i);

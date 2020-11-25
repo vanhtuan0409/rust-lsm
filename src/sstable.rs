@@ -1,5 +1,5 @@
 use crate::entry::Entry;
-use std::io::{Read, Seek, Write};
+use std::io::{Cursor, Read, Seek, Write};
 
 pub struct SSTable<T>
 where
@@ -8,11 +8,15 @@ where
     handle: T,
 }
 
-impl<T: Read + Write + Seek> SSTable<T> {
-    pub fn new(handle: T) -> Self {
-        Self { handle }
+impl SSTable<Cursor<Vec<u8>>> {
+    pub fn new_in_mem() -> Self {
+        Self {
+            handle: Cursor::new(Vec::new()),
+        }
     }
+}
 
+impl<T: Read + Write + Seek> SSTable<T> {
     #[allow(dead_code)]
     pub fn offset(&mut self) -> Result<u64, ()> {
         self.handle
