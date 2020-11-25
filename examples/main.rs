@@ -1,7 +1,6 @@
 extern crate lsm;
 
-use lsm::entry::Entry;
-use lsm::sstable::SSTable;
+use lsm::{Entry, SSTable};
 
 fn get_entry(index: usize) -> Entry {
     let key = format!("foo{}", index);
@@ -17,7 +16,7 @@ fn main() {
 
     for i in 0..10 {
         let entry = get_entry(i);
-        table.insert(entry).unwrap();
+        table.insert(&entry).unwrap();
     }
 
     table.for_each(|decoded| println!("{:?}", decoded));

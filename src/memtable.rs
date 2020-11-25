@@ -1,4 +1,4 @@
-use crate::entry::Entry;
+use crate::Entry;
 use std::collections::BTreeSet;
 
 pub struct MemTable {

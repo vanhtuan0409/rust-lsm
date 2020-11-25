@@ -1,22 +1,23 @@
-use crate::entry::Entry;
+use crate::encoding::{bincode::BincodeEncoder, Encoder};
+use crate::Entry;
 use std::io::{Cursor, Read, Seek, Write};
 
-pub struct SSTable<T>
-where
-    T: Read + Write + Seek,
-{
-    handle: T,
+pub struct SSTable<S: Read + Write + Seek, E: Encoder<S, S>> {
+    handle: S,
+    encoder: E,
 }
 
-impl SSTable<Cursor<Vec<u8>>> {
+type InMemDataSink = Cursor<Vec<u8>>;
+impl SSTable<InMemDataSink, BincodeEncoder> {
     pub fn new_in_mem() -> Self {
         Self {
             handle: Cursor::new(Vec::new()),
+            encoder: BincodeEncoder::new(),
         }
     }
 }
 
-impl<T: Read + Write + Seek> SSTable<T> {
+impl<S: Read + Write + Seek, E: Encoder<S, S>> SSTable<S, E> {
     #[allow(dead_code)]
     pub fn offset(&mut self) -> Result<u64, ()> {
         self.handle
@@ -27,7 +28,7 @@ impl<T: Read + Write + Seek> SSTable<T> {
     #[allow(dead_code)]
     pub fn search(&mut self, key: &[u8]) -> Option<Entry> {
         self.handle.seek(std::io::SeekFrom::Start(0)).ok()?;
-        while let Ok(decoded) = bincode::deserialize_from::<_, Entry>(&mut self.handle) {
+        while let Ok(decoded) = self.encoder.read_record(&mut self.handle) {
             if decoded.key.as_slice() == key {
                 return Some(decoded);
             }
@@ -40,16 +41,16 @@ impl<T: Read + Write + Seek> SSTable<T> {
         F: Fn(Entry),
     {
         self.handle.seek(std::io::SeekFrom::Start(0)).unwrap();
-        while let Ok(decoded) = bincode::deserialize_from::<_, Entry>(&mut self.handle) {
+        while let Ok(decoded) = self.encoder.read_record(&mut self.handle) {
             f(decoded);
         }
     }
 
-    pub fn insert(&mut self, entry: Entry) -> Result<(), ()> {
+    pub fn insert(&mut self, entry: &Entry) -> Result<(), ()> {
         self.handle
             .seek(std::io::SeekFrom::End(0))
             .map_err(|_| ())?;
-        bincode::serialize_into(&mut self.handle, &entry).map_err(|_| ())?;
+        self.encoder.write_record(&mut self.handle, entry)?;
         Ok(())
     }
 }
