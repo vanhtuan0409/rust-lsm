@@ -1,5 +1,4 @@
-mod encoding;
-
+pub mod encoding;
 mod entry;
 mod memtable;
 mod sstable;

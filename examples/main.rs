@@ -1,6 +1,7 @@
 extern crate lsm;
 
-use lsm::{Entry, SSTable};
+use lsm::{encoding::BincodeEncoder, Entry, SSTable};
+use std::io::Cursor;
 
 fn get_entry(index: usize) -> Entry {
     let key = format!("foo{}", index);
@@ -12,7 +13,7 @@ fn get_entry(index: usize) -> Entry {
 }
 
 fn main() {
-    let mut table = SSTable::new_in_mem();
+    let mut table = SSTable::new(Cursor::new(Vec::<u8>::new()), BincodeEncoder::new());
 
     for i in 0..10 {
         let entry = get_entry(i);
