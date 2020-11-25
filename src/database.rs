@@ -69,6 +69,10 @@ impl Database {
 
     #[allow(dead_code)]
     fn flush(&mut self) -> Result<(), ()> {
+        if self.mtb.is_empty() {
+            return Ok(());
+        }
+
         let data_dir = self.root_dir.join("segments");
         let mut new_segment: SSTable<BincodeEncoder> = SSTableBuilder::new()
             .with_id(self.next_id)

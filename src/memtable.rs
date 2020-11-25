@@ -20,6 +20,10 @@ impl MemTable {
         self.entries.len() == self.max_cap
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
     pub fn search(&mut self, key: &Key) -> Option<Entry> {
         self.entries.get(key).cloned()
     }
