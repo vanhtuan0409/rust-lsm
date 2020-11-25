@@ -1,4 +1,4 @@
-use crate::Entry;
+use crate::entry::Entry;
 use std::io::{Read, Seek, Write};
 
 pub struct SSTable<T>

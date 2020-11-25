@@ -1,9 +1,7 @@
-mod entry;
-mod memtable;
-mod sstable;
+extern crate lsm;
 
-use entry::Entry;
-use sstable::SSTable;
+use lsm::entry::Entry;
+use lsm::sstable::SSTable;
 use std::io::Cursor;
 
 fn get_entry(index: usize) -> Entry {

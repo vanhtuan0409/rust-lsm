@@ -1,5 +1,5 @@
 [package]
-name = "rust-lsm"
+name = "lsm"
 version = "0.1.0"
 authors = ["Tuan Vuong <vanhtuan0409@gmail.com>"]
 edition = "2018"
