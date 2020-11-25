@@ -93,6 +93,14 @@ impl<E: Encoder> SSTable<E> {
             encoder: self.encoder.clone(),
         }
     }
+
+    pub fn flush(&mut self, entries: Vec<&Entry>) -> Result<(), ()> {
+        self.sink.seek(SeekFrom::Start(0)).map_err(|_| ())?;
+        for entry in entries.into_iter() {
+            self.encoder.write_record(&mut self.sink, entry)?;
+        }
+        Ok(())
+    }
 }
 
 pub struct SSTableIter<E: Encoder> {

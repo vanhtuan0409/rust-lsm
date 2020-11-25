@@ -11,8 +11,6 @@ pub struct Database {
     mtb: MemTable,
     sstables: BTreeMap<usize, SSTable<BincodeEncoder>>,
     next_id: usize,
-
-    #[allow(dead_code)]
     root_dir: PathBuf,
 }
 
@@ -67,5 +65,21 @@ impl Database {
         }
 
         None
+    }
+
+    #[allow(dead_code)]
+    fn flush(&mut self) -> Result<(), ()> {
+        let data_dir = self.root_dir.join("segments");
+        let mut new_segment: SSTable<BincodeEncoder> = SSTableBuilder::new()
+            .with_id(self.next_id)
+            .with_data_dir(data_dir)
+            .with_bincode_encoder()
+            .build()
+            .ok_or(())?;
+        new_segment.flush(self.mtb.iter().collect::<Vec<_>>())?;
+        self.sstables.insert(self.next_id, new_segment);
+        self.mtb = MemTable::new(10);
+        self.next_id += 1;
+        Ok(())
     }
 }
