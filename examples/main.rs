@@ -12,17 +12,17 @@ fn get_entry(index: usize) -> Entry {
 }
 
 fn main() {
-    let mut table: SSTable<_, _> = SSTableBuilder::new()
+    let table: SSTable<_> = SSTableBuilder::new()
         .with_id("sstable01".to_string())
-        .with_inmem_sink()
+        .with_data_dir("data/segments".to_string())
         .with_bincode_encoder()
         .build()
         .unwrap();
 
-    for i in 0..10 {
-        let entry = get_entry(i);
-        table.insert(&entry).unwrap();
-    }
+    // for i in 0..10 {
+    //     let entry = get_entry(i);
+    //     table.insert(&entry).unwrap();
+    // }
 
     table.iter().for_each(|entry| println!("{:?}", entry));
 }

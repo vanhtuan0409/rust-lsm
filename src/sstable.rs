@@ -1,22 +1,23 @@
 use crate::encoding::{BincodeEncoder, Encoder};
 use crate::Entry;
-use std::io::{Cursor, Read, Seek, SeekFrom, Write};
+use std::io::{Seek, SeekFrom};
+use std::path::Path;
+use std::{
+    fs::{File, OpenOptions},
+    path::PathBuf,
+};
 
-pub trait DataSink: Read + Write + Seek + Clone {}
-impl<T> DataSink for T where T: Read + Write + Seek + Clone {}
-
-pub struct SSTableBuilder<S: DataSink, E: Encoder> {
+pub struct SSTableBuilder<E: Encoder> {
     id: Option<String>,
-    sink: Option<S>,
+    data_dir: Option<String>,
     encoder: Option<E>,
 }
 
-pub type InMemSink = Cursor<Vec<u8>>;
-impl<S: DataSink, E: Encoder> SSTableBuilder<S, E> {
+impl<E: Encoder> SSTableBuilder<E> {
     pub fn new() -> Self {
         Self {
             id: None,
-            sink: None,
+            data_dir: None,
             encoder: None,
         }
     }
@@ -24,48 +25,52 @@ impl<S: DataSink, E: Encoder> SSTableBuilder<S, E> {
     pub fn with_id(self, id: String) -> Self {
         Self {
             id: Some(id),
-            sink: self.sink,
-            encoder: self.encoder,
+            ..self
         }
     }
 
-    pub fn build(self) -> Option<SSTable<S, E>> {
+    pub fn with_data_dir(self, data_dir: String) -> Self {
+        Self {
+            data_dir: Some(data_dir),
+            ..self
+        }
+    }
+
+    pub fn build(self) -> Option<SSTable<E>> {
+        let file_path = Path::new(&self.data_dir?).join(self.id.clone()?);
+        let sink = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(file_path.clone())
+            .ok()?;
         Some(SSTable {
             id: self.id?,
-            sink: self.sink?,
+            sink,
+            file_path,
             encoder: self.encoder?,
         })
     }
 }
 
-impl<E: Encoder> SSTableBuilder<InMemSink, E> {
-    pub fn with_inmem_sink(self) -> SSTableBuilder<InMemSink, E> {
+impl SSTableBuilder<BincodeEncoder> {
+    pub fn with_bincode_encoder(self) -> SSTableBuilder<BincodeEncoder> {
         SSTableBuilder {
-            id: self.id,
-            sink: Some(Cursor::new(Vec::new())),
-            encoder: self.encoder,
-        }
-    }
-}
-
-impl<S: DataSink> SSTableBuilder<S, BincodeEncoder> {
-    pub fn with_bincode_encoder(self) -> SSTableBuilder<S, BincodeEncoder> {
-        SSTableBuilder {
-            id: self.id,
-            sink: self.sink,
             encoder: Some(BincodeEncoder::new()),
+            ..self
         }
     }
 }
 
 #[derive(Debug)]
-pub struct SSTable<S: DataSink, E: Encoder> {
+pub struct SSTable<E: Encoder> {
     id: String,
-    sink: S,
+    file_path: PathBuf,
+    sink: File,
     encoder: E,
 }
 
-impl<S: DataSink, E: Encoder> SSTable<S, E> {
+impl<E: Encoder> SSTable<E> {
     #[allow(dead_code)]
     pub fn offset(&mut self) -> Result<u64, ()> {
         self.sink.seek(SeekFrom::Current(0)).map_err(|_| ())
@@ -82,8 +87,8 @@ impl<S: DataSink, E: Encoder> SSTable<S, E> {
         None
     }
 
-    pub fn iter(&self) -> SSTableIter<S, E> {
-        let mut sink = self.sink.clone();
+    pub fn iter(&self) -> SSTableIter<E> {
+        let mut sink = self.sink.try_clone().unwrap();
         sink.seek(SeekFrom::Start(0)).unwrap();
         SSTableIter {
             sink,
@@ -98,12 +103,12 @@ impl<S: DataSink, E: Encoder> SSTable<S, E> {
     }
 }
 
-pub struct SSTableIter<S: DataSink, E: Encoder> {
-    sink: S,
+pub struct SSTableIter<E: Encoder> {
+    sink: File,
     encoder: E,
 }
 
-impl<S: DataSink, E: Encoder> Iterator for SSTableIter<S, E> {
+impl<E: Encoder> Iterator for SSTableIter<E> {
     type Item = Entry;
 
     fn next(&mut self) -> Option<Self::Item> {
