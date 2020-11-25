@@ -6,5 +6,3 @@ mod sstable;
 
 pub use database::*;
 pub use entry::*;
-pub use memtable::*;
-pub use sstable::*;

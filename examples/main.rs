@@ -1,28 +1,10 @@
 extern crate lsm;
 
-use lsm::{Entry, SSTable, SSTableBuilder};
-
-fn get_entry(index: usize) -> Entry {
-    let key = format!("foo{}", index);
-    let value = format!("bar{}", index);
-    Entry {
-        key: key.as_bytes().to_vec(),
-        value: value.as_bytes().to_vec(),
-    }
-}
+use lsm::{Database, Entry};
 
 fn main() {
-    let table: SSTable<_> = SSTableBuilder::new()
-        .with_id("sstable01".to_string())
-        .with_data_dir("data/segments".to_string())
-        .with_bincode_encoder()
-        .build()
-        .unwrap();
-
-    // for i in 0..10 {
-    //     let entry = get_entry(i);
-    //     table.insert(&entry).unwrap();
-    // }
-
-    table.iter().for_each(|entry| println!("{:?}", entry));
+    let mut db = Database::open("./data").unwrap();
+    db.insert(&Entry::new("foo", "bar")).unwrap();
+    let found = db.search(&Entry::new_key("foo")).unwrap();
+    println!("{:?}", found)
 }

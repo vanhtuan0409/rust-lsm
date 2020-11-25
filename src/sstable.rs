@@ -1,7 +1,9 @@
-use crate::encoding::{BincodeEncoder, Encoder};
 use crate::Entry;
+use crate::{
+    encoding::{BincodeEncoder, Encoder},
+    Key,
+};
 use std::io::{Seek, SeekFrom};
-use std::path::Path;
 use std::{
     fs::{File, OpenOptions},
     path::PathBuf,
@@ -9,7 +11,7 @@ use std::{
 
 pub struct SSTableBuilder<E: Encoder> {
     id: Option<String>,
-    data_dir: Option<String>,
+    data_dir: Option<PathBuf>,
     encoder: Option<E>,
 }
 
@@ -29,7 +31,7 @@ impl<E: Encoder> SSTableBuilder<E> {
         }
     }
 
-    pub fn with_data_dir(self, data_dir: String) -> Self {
+    pub fn with_data_dir(self, data_dir: PathBuf) -> Self {
         Self {
             data_dir: Some(data_dir),
             ..self
@@ -37,7 +39,7 @@ impl<E: Encoder> SSTableBuilder<E> {
     }
 
     pub fn build(self) -> Option<SSTable<E>> {
-        let file_path = Path::new(&self.data_dir?).join(self.id.clone()?);
+        let file_path = self.data_dir?.join(self.id.clone()?);
         let sink = OpenOptions::new()
             .read(true)
             .write(true)
@@ -72,21 +74,17 @@ pub struct SSTable<E: Encoder> {
 
 impl<E: Encoder> SSTable<E> {
     #[allow(dead_code)]
-    pub fn offset(&mut self) -> Result<u64, ()> {
-        self.sink.seek(SeekFrom::Current(0)).map_err(|_| ())
-    }
-
-    #[allow(dead_code)]
-    pub fn search(&mut self, key: &[u8]) -> Option<Entry> {
+    pub fn search(&mut self, key: &Key) -> Option<Entry> {
         self.sink.seek(SeekFrom::Start(0)).ok()?;
         while let Ok(decoded) = self.encoder.read_record(&mut self.sink) {
-            if decoded.key.as_slice() == key {
+            if &decoded.key == key {
                 return Some(decoded);
             }
         }
         None
     }
 
+    #[allow(dead_code)]
     pub fn iter(&self) -> SSTableIter<E> {
         let mut sink = self.sink.try_clone().unwrap();
         sink.seek(SeekFrom::Start(0)).unwrap();
@@ -94,12 +92,6 @@ impl<E: Encoder> SSTable<E> {
             sink,
             encoder: self.encoder.clone(),
         }
-    }
-
-    pub fn insert(&mut self, entry: &Entry) -> Result<(), ()> {
-        self.sink.seek(SeekFrom::End(0)).map_err(|_| ())?;
-        self.encoder.write_record(&mut self.sink, entry)?;
-        Ok(())
     }
 }
 

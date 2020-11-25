@@ -18,3 +18,16 @@ impl fmt::Debug for Entry {
             .finish()
     }
 }
+
+impl Entry {
+    pub fn new_key(key: &str) -> Key {
+        key.as_bytes().to_vec()
+    }
+
+    pub fn new(key: &str, val: &str) -> Self {
+        Self {
+            key: Entry::new_key(key),
+            value: val.as_bytes().to_vec(),
+        }
+    }
+}
