@@ -4,6 +4,7 @@ use crate::encoding::Encoder;
 use crate::Entry;
 use std::io::{Read, Write};
 
+#[derive(Debug, Clone)]
 pub struct BincodeEncoder {}
 
 impl BincodeEncoder {

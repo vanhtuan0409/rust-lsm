@@ -24,5 +24,5 @@ fn main() {
         table.insert(&entry).unwrap();
     }
 
-    table.scan(|entry| println!("{:?}", entry));
+    table.iter().for_each(|entry| println!("{:?}", entry));
 }

@@ -1,9 +1,9 @@
 use crate::encoding::{BincodeEncoder, Encoder};
 use crate::Entry;
-use std::io::{Cursor, Read, Seek, Write};
+use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
-pub trait DataSink: Read + Write + Seek {}
-impl<T> DataSink for T where T: Read + Write + Seek {}
+pub trait DataSink: Read + Write + Seek + Clone {}
+impl<T> DataSink for T where T: Read + Write + Seek + Clone {}
 
 pub struct SSTableBuilder<S: DataSink, E: Encoder> {
     id: Option<String>,
@@ -58,6 +58,7 @@ impl<S: DataSink> SSTableBuilder<S, BincodeEncoder> {
     }
 }
 
+#[derive(Debug)]
 pub struct SSTable<S: DataSink, E: Encoder> {
     id: String,
     sink: S,
@@ -67,14 +68,12 @@ pub struct SSTable<S: DataSink, E: Encoder> {
 impl<S: DataSink, E: Encoder> SSTable<S, E> {
     #[allow(dead_code)]
     pub fn offset(&mut self) -> Result<u64, ()> {
-        self.sink
-            .seek(std::io::SeekFrom::Current(0))
-            .map_err(|_| ())
+        self.sink.seek(SeekFrom::Current(0)).map_err(|_| ())
     }
 
     #[allow(dead_code)]
     pub fn search(&mut self, key: &[u8]) -> Option<Entry> {
-        self.sink.seek(std::io::SeekFrom::Start(0)).ok()?;
+        self.sink.seek(SeekFrom::Start(0)).ok()?;
         while let Ok(decoded) = self.encoder.read_record(&mut self.sink) {
             if decoded.key.as_slice() == key {
                 return Some(decoded);
@@ -83,19 +82,31 @@ impl<S: DataSink, E: Encoder> SSTable<S, E> {
         None
     }
 
-    pub fn scan<F>(&mut self, f: F)
-    where
-        F: Fn(&Entry),
-    {
-        self.sink.seek(std::io::SeekFrom::Start(0)).unwrap();
-        while let Ok(decoded) = self.encoder.read_record(&mut self.sink) {
-            f(&decoded);
+    pub fn iter(&self) -> SSTableIter<S, E> {
+        let mut sink = self.sink.clone();
+        sink.seek(SeekFrom::Start(0)).unwrap();
+        SSTableIter {
+            sink,
+            encoder: self.encoder.clone(),
         }
     }
 
     pub fn insert(&mut self, entry: &Entry) -> Result<(), ()> {
-        self.sink.seek(std::io::SeekFrom::End(0)).map_err(|_| ())?;
+        self.sink.seek(SeekFrom::End(0)).map_err(|_| ())?;
         self.encoder.write_record(&mut self.sink, entry)?;
         Ok(())
+    }
+}
+
+pub struct SSTableIter<S: DataSink, E: Encoder> {
+    sink: S,
+    encoder: E,
+}
+
+impl<S: DataSink, E: Encoder> Iterator for SSTableIter<S, E> {
+    type Item = Entry;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.encoder.read_record(&mut self.sink).ok()
     }
 }

@@ -22,11 +22,8 @@ impl MemTable {
         self.entries.get(key).cloned()
     }
 
-    pub fn scan<F>(&mut self, f: F)
-    where
-        F: Fn(&Entry),
-    {
-        self.entries.iter().for_each(|(_, entry)| f(entry))
+    pub fn iter(&mut self) -> impl Iterator<Item = &Entry> + '_ {
+        self.entries.iter().map(|(_, val)| val)
     }
 
     pub fn insert(&mut self, entry: Entry) -> Result<(), ()> {
