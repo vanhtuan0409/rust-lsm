@@ -1,16 +1,56 @@
-use crate::encoding::Encoder;
+use crate::encoding::{BincodeEncoder, Encoder};
 use crate::Entry;
-use std::io::{Read, Seek, Write};
+use std::io::{Cursor, Read, Seek, Write};
 
 pub trait DataSink: Read + Write + Seek {}
 impl<T> DataSink for T where T: Read + Write + Seek {}
 
-pub struct SSTable<S: DataSink, E: Encoder<S, S>> {
+pub struct SSTableBuilder<S: DataSink, E: Encoder> {
+    sink: Option<S>,
+    encoder: Option<E>,
+}
+
+pub type InMemSink = Cursor<Vec<u8>>;
+impl<S: DataSink, E: Encoder> SSTableBuilder<S, E> {
+    pub fn new() -> Self {
+        Self {
+            sink: None,
+            encoder: None,
+        }
+    }
+
+    pub fn build(self) -> Option<SSTable<S, E>> {
+        Some(SSTable {
+            sink: self.sink?,
+            encoder: self.encoder?,
+        })
+    }
+}
+
+impl<E: Encoder> SSTableBuilder<InMemSink, E> {
+    pub fn with_inmem_sink(self) -> SSTableBuilder<InMemSink, E> {
+        SSTableBuilder {
+            sink: Some(Cursor::new(Vec::new())),
+            encoder: self.encoder,
+        }
+    }
+}
+
+impl<S: DataSink> SSTableBuilder<S, BincodeEncoder> {
+    pub fn with_bincode_encoder(self) -> SSTableBuilder<S, BincodeEncoder> {
+        SSTableBuilder {
+            sink: self.sink,
+            encoder: Some(BincodeEncoder::new()),
+        }
+    }
+}
+
+pub struct SSTable<S: DataSink, E: Encoder> {
     sink: S,
     encoder: E,
 }
 
-impl<S: DataSink, E: Encoder<S, S>> SSTable<S, E> {
+impl<S: DataSink, E: Encoder> SSTable<S, E> {
     pub fn new(sink: S, encoder: E) -> Self {
         Self { sink, encoder }
     }

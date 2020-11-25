@@ -12,12 +12,12 @@ impl BincodeEncoder {
     }
 }
 
-impl<R: Read, W: Write> Encoder<R, W> for BincodeEncoder {
-    fn read_record(&self, input: &mut R) -> Result<Entry, ()> {
+impl Encoder for BincodeEncoder {
+    fn read_record<R: Read>(&self, input: &mut R) -> Result<Entry, ()> {
         bincode::deserialize_from::<_, Entry>(input).map_err(|_| ())
     }
 
-    fn write_record(&self, output: &mut W, entry: &Entry) -> Result<(), ()> {
+    fn write_record<W: Write>(&self, output: &mut W, entry: &Entry) -> Result<(), ()> {
         bincode::serialize_into(output, entry).map_err(|_| ())
     }
 }
