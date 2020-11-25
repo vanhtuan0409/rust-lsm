@@ -54,10 +54,12 @@ impl Database {
     }
 
     pub fn search(&mut self, key: &Key) -> Option<Entry> {
+        // look up in memtable 1st
         if let Some(found) = self.mtb.search(key) {
             return Some(found);
         }
 
+        // then look up in sstable segment in reverse order
         for (_, segment) in self.sstables.iter_mut().rev() {
             if let Some(found) = segment.search(key) {
                 return Some(found);
