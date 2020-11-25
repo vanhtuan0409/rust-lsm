@@ -2,8 +2,8 @@ use crate::{Entry, Key};
 use std::collections::*;
 
 pub struct MemTable {
-    pub entries: BTreeMap<Key, Entry>,
-    pub max_cap: usize,
+    entries: BTreeMap<Key, Entry>,
+    max_cap: usize,
 }
 
 impl MemTable {
@@ -12,6 +12,10 @@ impl MemTable {
             entries: BTreeMap::new(),
             max_cap,
         }
+    }
+
+    pub fn is_full(&self) -> bool {
+        self.entries.len() == self.max_cap
     }
 
     pub fn search(&mut self, key: &[u8]) -> Option<Entry> {
