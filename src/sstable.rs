@@ -75,11 +75,11 @@ impl<S: DataSink, E: Encoder> SSTable<S, E> {
 
     pub fn scan<F>(&mut self, f: F)
     where
-        F: Fn(Entry),
+        F: Fn(&Entry),
     {
         self.sink.seek(std::io::SeekFrom::Start(0)).unwrap();
         while let Ok(decoded) = self.encoder.read_record(&mut self.sink) {
-            f(decoded);
+            f(&decoded);
         }
     }
 
