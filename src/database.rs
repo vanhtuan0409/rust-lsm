@@ -37,7 +37,13 @@ impl Database {
     }
 
     pub fn insert(&mut self, entry: &Entry) -> Result<(), ()> {
-        self.mtb.insert(entry)
+        self.mtb.insert(entry)?;
+
+        // Should be able to flush async
+        if self.mtb.is_full() {
+            self.flush()?;
+        }
+        Ok(())
     }
 
     pub fn search(&mut self, key: &Key) -> Option<Entry> {
@@ -56,7 +62,6 @@ impl Database {
         None
     }
 
-    #[allow(dead_code)]
     pub fn flush(&mut self) -> Result<(), ()> {
         if self.mtb.is_empty() {
             return Ok(());
@@ -94,5 +99,12 @@ impl Database {
             self.sstables.insert(segment_id, table);
         }
         Ok(())
+    }
+}
+
+impl Drop for Database {
+    fn drop(&mut self) {
+        // flush Memtable on dropped
+        let _ = self.flush();
     }
 }
