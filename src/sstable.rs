@@ -86,8 +86,12 @@ impl<E: Encoder> SSTable<E> {
 
     #[allow(dead_code)]
     pub fn iter(&self) -> SSTableIter<E> {
+        self.iter_at(0)
+    }
+
+    pub fn iter_at(&self, offset: u64) -> SSTableIter<E> {
         let mut sink = self.sink.try_clone().unwrap();
-        sink.seek(SeekFrom::Start(0)).unwrap();
+        sink.seek(SeekFrom::Start(offset)).unwrap();
         SSTableIter {
             sink,
             encoder: self.encoder.clone(),
