@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use std::fs::{read_dir, DirEntry};
 use std::path::{Path, PathBuf};
 
-static MEMTABLE_SIZE: usize = 10;
+const MEMTABLE_SIZE: usize = 10;
 
 #[derive(Debug)]
 pub struct Database {
