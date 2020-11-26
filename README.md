@@ -11,6 +11,7 @@ Finished:
 - [x] SSTable indexing with skip list
 - [ ] Persist SSTable index instead of re-calculate
 - [ ] Periodically flush Memtable into SSTable
+- [ ] Compaction
 - [ ] WAL and recover from crash
 - [ ] Thread safe
 - [ ] Configurable
