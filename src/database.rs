@@ -39,7 +39,7 @@ impl Database {
     pub fn insert(&mut self, entry: &Entry) -> Result<(), ()> {
         self.mtb.insert(entry)?;
 
-        // Should be able to flush async
+        // TODO: Should be able to flush async
         if self.mtb.is_full() {
             self.flush()?;
         }
