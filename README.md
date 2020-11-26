@@ -8,7 +8,7 @@ Finished:
 
 - [x] Memtable
 - [x] Persisted SSTable
-- [ ] SSTable indexing with skip list
+- [x] SSTable indexing with skip list
 - [ ] Persist SSTable index instead of re-calculate
 - [ ] Periodically flush Memtable into SSTable
 - [ ] WAL and recover from crash

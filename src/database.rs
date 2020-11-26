@@ -57,7 +57,7 @@ impl Database {
     }
 
     #[allow(dead_code)]
-    fn flush(&mut self) -> Result<(), ()> {
+    pub fn flush(&mut self) -> Result<(), ()> {
         if self.mtb.is_empty() {
             return Ok(());
         }
@@ -85,13 +85,13 @@ impl Database {
         for path in read_dir(data_dir.clone()).map_err(|_| ())? {
             let segment_id = get_segment_id_from_path(path.map_err(|_| ())?)?;
             self.next_id = std::cmp::max(self.next_id, segment_id + 1);
-            let segment: SSTable<BincodeEncoder> = SSTableBuilder::new()
+            let table: SSTable<BincodeEncoder> = SSTableBuilder::new()
                 .with_id(segment_id)
                 .with_data_dir(data_dir.clone())
                 .with_bincode_encoder()
                 .build()
                 .ok_or(())?;
-            self.sstables.insert(segment_id, segment);
+            self.sstables.insert(segment_id, table);
         }
         Ok(())
     }

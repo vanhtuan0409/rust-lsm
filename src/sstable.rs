@@ -1,13 +1,13 @@
-use crate::Entry;
-use crate::{
-    encoding::{BincodeEncoder, Encoder},
-    Key,
-};
+use crate::encoding::{BincodeEncoder, Encoder};
+use crate::{Entry, Key};
 use std::io::{Seek, SeekFrom};
+use std::path::PathBuf;
 use std::{
+    collections::BTreeMap,
     fs::{File, OpenOptions},
-    path::PathBuf,
 };
+
+const BLOCK_SIZE: usize = 2;
 
 pub struct SSTableBuilder<E: Encoder> {
     id: Option<usize>,
@@ -46,12 +46,15 @@ impl<E: Encoder> SSTableBuilder<E> {
             .create(true)
             .open(file_path.clone())
             .ok()?;
-        Some(SSTable {
+        let mut table = SSTable {
             id: self.id?,
             sink,
             file_path,
             encoder: self.encoder?,
-        })
+            index: BTreeMap::new(),
+        };
+        table.rehydrate_index().ok()?;
+        Some(table)
     }
 }
 
@@ -68,20 +71,17 @@ impl SSTableBuilder<BincodeEncoder> {
 pub struct SSTable<E: Encoder> {
     id: usize,
     file_path: PathBuf,
+    index: BTreeMap<Key, u64>,
     sink: File,
     encoder: E,
 }
 
 impl<E: Encoder> SSTable<E> {
-    #[allow(dead_code)]
     pub fn search(&mut self, key: &Key) -> Option<Entry> {
-        self.sink.seek(SeekFrom::Start(0)).ok()?;
-        while let Ok(decoded) = self.encoder.read_record(&mut self.sink) {
-            if &decoded.key == key {
-                return Some(decoded);
-            }
-        }
-        None
+        let offset = self.get_offset_for_key(key)?;
+        self.iter_at(offset)
+            .take(BLOCK_SIZE) // take a block at offset with BLOCK_SIZE items
+            .find(|entry| &entry.key == key)
     }
 
     #[allow(dead_code)]
@@ -99,11 +99,41 @@ impl<E: Encoder> SSTable<E> {
     }
 
     pub fn flush(&mut self, entries: Vec<&Entry>) -> Result<(), ()> {
+        self.sink.set_len(0).map_err(|_| ())?; // truncate file
         self.sink.seek(SeekFrom::Start(0)).map_err(|_| ())?;
         for entry in entries.into_iter() {
             self.encoder.write_record(&mut self.sink, entry)?;
         }
+        self.rehydrate_index()?;
         Ok(())
+    }
+
+    fn rehydrate_index(&mut self) -> Result<(), ()> {
+        self.sink.seek(SeekFrom::Start(0)).map_err(|_| ())?;
+        let mut index = 0;
+        while let Ok(entry) = self.encoder.read_record(&mut self.sink) {
+            if index % BLOCK_SIZE == 0 {
+                let offset = self.offset()? - self.encoder.sized(&entry)?;
+                self.index.insert(entry.key.clone(), offset);
+            }
+            index += 1;
+        }
+        Ok(())
+    }
+
+    fn get_offset_for_key(&mut self, key: &Key) -> Option<u64> {
+        Some(
+            *self
+                .index
+                .iter()
+                .take_while(|(curr_key, _)| *curr_key <= key)
+                .last()?
+                .1,
+        )
+    }
+
+    fn offset(&mut self) -> Result<u64, ()> {
+        self.sink.seek(SeekFrom::Current(0)).map_err(|_| ())
     }
 }
 
